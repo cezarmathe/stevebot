@@ -5,7 +5,7 @@ all: bin/stevebot
 
 bin/stevebot: $(SRC)
 	mkdir -p bin/
-	go build -o bin/stevebot
+	go build -o bin/stevebot -mod vendor
 
 clean:
 	rm -r bin

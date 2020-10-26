@@ -11,15 +11,16 @@ github.com/gorilla/websocket
 # github.com/hashicorp/go-hclog v0.14.1
 ## explicit
 github.com/hashicorp/go-hclog
+# github.com/kr/pretty v0.1.0
+## explicit
 # github.com/mattn/go-colorable v0.1.4
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.10
 github.com/mattn/go-isatty
-# go.uber.org/multierr v1.6.0
-## explicit
-# go.uber.org/zap v1.16.0
+# github.com/stretchr/testify v1.4.0
 ## explicit
 # golang.org/x/crypto v0.0.0-20190510104115-cbcb75029529
+## explicit
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/nacl/secretbox
 golang.org/x/crypto/poly1305
@@ -27,3 +28,5 @@ golang.org/x/crypto/salsa20/salsa
 # golang.org/x/sys v0.0.0-20191008105621-543471e840be
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
+# gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
+## explicit
