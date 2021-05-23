@@ -1,0 +1,3 @@
+[submodule "deployments/terraform-docker-stevebot"]
+	path = deployments/terraform-docker-stevebot
+	url = ssh://git@github.com/cezarmathe/terraform-docker-stevebot.git
