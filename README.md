@@ -1,15 +1,11 @@
 # stevebot
 
-A Discord bot for my minecraft server.
+Control your Minecraft server via RCON, right from your Discord server.
 
-## Usage
+**NOTE** This readme is a work in progress.
 
-The stevebot needs the following environment variables:
+## License
 
-- `STEVEBOT_TOKEN`
-- `STEVEBOT_COMMAND_PREFIX`
-- `STEVEBOT_RCON_HOST`
-- `STEVEBOT_RCON_PORT`
-- `STEVEBOT_RCON_PASS`
+[MIT]
 
-You can find a Docker container at [hub.docker.com/r/cezarmathe/stevebot](https://hub.docker.com/r/cezarmathe/stevebot).
+[MIT]: /LICENSE
