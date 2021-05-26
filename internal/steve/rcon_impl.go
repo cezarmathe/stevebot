@@ -7,27 +7,6 @@ import (
 	"github.com/bearbin/mcgorcon"
 )
 
-type rconCommandOutputImpl struct {
-	out string
-	err error
-}
-
-func newRconCommandOutput(out string, err error) RconCommandOutput {
-	return &rconCommandOutputImpl{out, err}
-}
-
-func (o *rconCommandOutputImpl) Out() string {
-	return o.out
-}
-
-func (o *rconCommandOutputImpl) Success() bool {
-	return o.err != nil
-}
-
-func (o *rconCommandOutputImpl) Error() string {
-	return o.err.Error()
-}
-
 // rconClientDummy is a dummy rcon client.
 type rconClientDummy struct{}
 
