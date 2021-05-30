@@ -2,7 +2,6 @@ package steve
 
 import (
 	"context"
-	"fmt"
 	"sync"
 )
 
@@ -11,10 +10,12 @@ import (
 type Steve interface {
 	// Start starts steve.
 	//
-	// This function must return an error if:
-	// * the steve instance has not been initialized yet
-	// * any other errors are encountered during the start process
+	// This function must return an error if any errors are encountered during
+	// the start process.
 	Start() error
+
+	// SubmitCommand submits a command and returns after the command is started.
+	SubmitCommand(context.Context, []string) SteveCommandOutput
 
 	// watchServer is a goroutine that watches the rcon server.
 	//
@@ -33,14 +34,13 @@ type Steve interface {
 	// runWatchServer schedules a watch server operation now.
 	runWatchServer()
 
-	// handleIncomingCommands is a goroutine that handles incoming commands.
-	handleIncomingCommands()
-
 	// updateRconClient updates steve's current rcon client.
 	//
 	// This is used for switching between a real rcon client and a dummy rcon
 	// client.
-	updateRconClient()
+	//
+	// If a non-nil locker is passed, it must be locked.
+	updateRconClient(rconClient, sync.Locker) error
 
 	// handleCommand handles a single command.
 	//
@@ -48,9 +48,11 @@ type Steve interface {
 	// * get the rcon client
 	// * forward the command to the rcon client
 	// * schedule a run watch server operation if running the command fails
-	handleCommand()
+	handleCommand(context.Context, SteveCommandInput)
 
 	// getRconClient retrieves the rcon client.
+	//
+	// This function does NOT unlock the client lock!
 	//
 	// This function must:
 	// * return the current rcon client, if it is not a dummy
@@ -60,7 +62,7 @@ type Steve interface {
 	//   client
 	// * replace the dummy rcon client if a real rcon client could be obtained
 	// * return a dummy rcon client if getting a rcon client fails
-	getRconClient()
+	getRconClient(ctx context.Context) (rconClient, error)
 }
 
 // NewSteve creates a new steve instance.
@@ -69,10 +71,10 @@ type Steve interface {
 // * a steve instance has already been initialized
 // * other errors are encountered when initializing steve
 func NewSteve(ctx context.Context, wg *sync.WaitGroup) error {
-	return fmt.Errorf("steve: not implemented")
+	return newSteve(ctx, wg)
 }
 
 // Get returns a Steve instance.
 func Get() Steve {
-	return nil
+	return steve
 }
