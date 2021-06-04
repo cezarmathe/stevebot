@@ -1,22 +1,28 @@
-FROM golang:1.15.3-alpine as builder
+# Dockerfile
 
-RUN apk add git make
+FROM alpine:edge
 
-RUN mkdir /stevebot && \
-        git clone https://github.com/cezarmathe/stevebot.git /stevebot && \
-        cd /stevebot && \
-        make
+# add the stevebot user and group
+RUN addgroup stevebot && adduser -S -G stevebot stevebot
+# update package db and install dumb-init (init process) and su-exec (run
+# application as another user and group)
+RUN apk update && apk add --no-cache dumb-init su-exec
 
-FROM alpine:latest
+# required environment variables
 
-RUN addgroup stevebot && \
-    adduser -S -G stevebot stevebot
+ENV STEVEBOT_RCON_HOST="127.0.0.1"
+ENV STEVEBOT_RCON_PORT="25575"
+ENV STEVEBOT_RCON_PASSWORD=""
+ENV STEVEBOT_DISCORD_TOKEN=""
+ENV STEVEBOT_COMMAND_PREFIX="~"
 
-RUN apk add --no-cache \
-        dumb-init \
-        su-exec
+# ---
 
-COPY --from=builder /stevebot/bin/stevebot /bin/stevebot
+# the version of stevebot to be packaged
+ARG version="dev"
+
+# add stevebot binary
+COPY cmd/stevebot/stevebot-${version}-linux-amd64 /usr/local/bin/stevebot
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD [ "su-exec", "stevebot:stevebot", "stevebot" ]
