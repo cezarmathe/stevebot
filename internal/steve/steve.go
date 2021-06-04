@@ -52,7 +52,7 @@ type Steve interface {
 
 	// getRconClient retrieves the rcon client.
 	//
-	// This function does NOT unlock the client lock!
+	// This function expects the client lock to be acquired!
 	//
 	// This function must:
 	// * return the current rcon client, if it is not a dummy
