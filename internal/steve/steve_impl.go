@@ -249,9 +249,10 @@ func (s *steveImpl) SubmitCommand(ctx context.Context,
 	select {
 	case <-ctx.Done():
 		// fixme 01/06/2021: client lock will remain locked forever?
-		// go func() {
-		// 	s.clientLock.Unlock()
-		// }()
+		go func() {
+			<-locked
+			s.clientLock.Unlock()
+		}()
 		return newSteveCommandOutput(fmt.Errorf("could not get rcon client"))
 	case <-locked:
 		in, out := newSteveCommand(command)
