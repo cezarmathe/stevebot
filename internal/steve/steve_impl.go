@@ -169,13 +169,6 @@ func (s *steveImpl) watchServer() {
 			log.Warnw("failed to dial rcon server",
 				"err", "timeout",
 				"who", "watchServer")
-			// fixme 25/05/2021: hardcoded bot status
-			// err := bot.Get().UpdateStatus("disconnected")
-			// if err != nil {
-			// 	log.Warnw("failed to update bot status",
-			// 		"err", err,
-			// 		"who", "watchServer")
-			// }
 			err := s.updateRconClient(newDummyRconClient(), nil)
 			if err != nil {
 				log.Warnw("failed to update rcon client",
@@ -187,13 +180,6 @@ func (s *steveImpl) watchServer() {
 				log.Warnw("failed to dial rcon server",
 					"err", err,
 					"who", "watchServer")
-				// fixme 25/05/2021: hardcoded bot status
-				// err = bot.Get().UpdateStatus("disconnected")
-				// if err != nil {
-				// 	log.Warnw("failed to update bot status",
-				// 		"err", err,
-				// 		"who", "watchServer")
-				// }
 				err = s.updateRconClient(newDummyRconClient(), nil)
 				if err != nil {
 					log.Warnw("failed to update rcon client",
