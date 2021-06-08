@@ -11,6 +11,10 @@ import (
 	"github.com/cezarmathe/stevebot/internal/steve"
 )
 
+const (
+	COMMAND_TIMEOUT = time.Second * 10
+)
+
 var (
 	bot *botImpl
 )
@@ -85,8 +89,7 @@ func (b *botImpl) handle(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// get command words
 	command := strings.Fields(strings.TrimPrefix(m.Content, commandPrefix))
 
-	// fixme 26/05/2021: hardcoded command timeout
-	ctx, cancel := context.WithTimeout(b.ctx, time.Second*10)
+	ctx, cancel := context.WithTimeout(b.ctx, COMMAND_TIMEOUT)
 
 	// todo 24/05/2021: first send a message that says "working" and then update
 	// it with the outcome of running the command
