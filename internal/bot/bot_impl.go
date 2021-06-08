@@ -12,7 +12,16 @@ import (
 )
 
 const (
+	// Command timeout - the amount of time bot will wait for before declaring
+	// a command as failed.
 	COMMAND_TIMEOUT = time.Second * 10
+
+	// Emoji that signifies that a command is in progress.
+	CMD_WIP_EMOJI = "🛠 "
+	// Emoji that signifies that a command was successful.
+	CMD_OK_EMOJI = "✅ "
+	// Emoji that signifies that a command failed.
+	CMD_ERR_EMOJI = "❌ "
 )
 
 var (
@@ -92,35 +101,67 @@ func (b *botImpl) handle(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	ctx, cancel := context.WithTimeout(b.ctx, COMMAND_TIMEOUT)
 
-	// todo 24/05/2021: first send a message that says "working" and then update
-	// it with the outcome of running the command
-	// todo 26/05/2021: get bot update status from out chan
-	done := make(chan struct{}, 1)
+	done := make(chan error, 1)
 	go func() {
-		steveOut := steve.Get().SubmitCommand(ctx, command)
-		if !steveOut.Success() {
-			s.ChannelMessageSend(m.ChannelID, steveOut.Error())
-			done <- struct{}{}
+		// send a message to signify that the command was received and we're
+		// working on it
+		wipMsg := fmt.Sprintf("%s working on it.. (\"%s\" by %s)",
+			CMD_WIP_EMOJI, strings.Join(command, " "), m.Author.Mention())
+		msg, err := s.ChannelMessageSend(m.ChannelID, wipMsg)
+		if err != nil {
+			done <- err
 			cancel()
 			return
 		}
 
-		rconOut := <-steveOut.OutChan()
-		if !rconOut.Success() {
-			s.ChannelMessageSend(m.ChannelID, rconOut.Error())
-		} else {
-			s.ChannelMessageSend(m.ChannelID, rconOut.Out())
+		// submit the command
+		// if this fails, update the WIP message and exit
+		steveOut := steve.Get().SubmitCommand(ctx, command)
+		if !steveOut.Success() {
+			errMsg := fmt.Sprintf("%s command failed: %s (\"%s\" by %s)",
+				CMD_ERR_EMOJI,
+				steveOut.Error(),
+				strings.Join(command, " "),
+				m.Author.Mention())
+			_, err = s.ChannelMessageEdit(m.ChannelID, msg.ID, errMsg)
+			done <- err
+			cancel()
+			return
 		}
-		done <- struct{}{}
+
+		// wait for the command to finish
+		rconOut := <-steveOut.OutChan()
+
+		// update wip message with command output
+		if rconOut.Success() {
+			okMsg := fmt.Sprintf("%s %s (\"%s\" by %s)",
+				CMD_OK_EMOJI,
+				rconOut.Out(),
+				strings.Join(command, " "),
+				m.Author.Mention())
+			_, err = s.ChannelMessageEdit(m.ChannelID, msg.ID, okMsg)
+		} else {
+			errMsg := fmt.Sprintf("%s %s (\"%s\" by %s)",
+				CMD_ERR_EMOJI,
+				rconOut.Error(),
+				strings.Join(command, " "),
+				m.Author.Mention())
+			_, err = s.ChannelMessageEdit(m.ChannelID, msg.ID, errMsg)
+		}
+		done <- err
 		cancel()
 	}()
 
 	select {
 	case <-b.ctx.Done():
 		cancel()
-		return
-	case <-done:
-		return
+	case err := <-done:
+		if err != nil {
+			log.Warnw("command failed: %s",
+				err,
+				"cmd", strings.Join(command, " "),
+				"author", m.Author.String())
+		}
 	}
 }
 
