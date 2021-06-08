@@ -82,6 +82,7 @@ func (b *botImpl) handle(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	// if the message does not match with how a command starts, return
 	if !commandStartRegex.Match([]byte(m.Content)) {
 		return
 	}
