@@ -21,6 +21,16 @@ BIN = cmd/stevebot/stevebot-$(VERSION)-$(GOOS)-$(GOARCH)
 # docker image name
 DOCKER_IMAGE_NAME ?= cezarmathe/stevebot
 
+# runtime env vars
+STEVEBOT_RCON_HOST=$(shell jq .rcon_host < dev.json)
+STEVEBOT_RCON_PORT=$(shell jq .rcon_port < dev.json)
+STEVEBOT_RCON_PASSWORD=$(shell jq .rcon_password < dev.json)
+STEVEBOT_DISCORD_TOKEN=$(shell jq .discord_token < dev.json)
+STEVEBOT_COMMAND_PREFIX=$(shell jq .command_prefix < dev.json)
+STEVEBOT_ALLOWED_COMMANDS=$(shell jq .allowed_commands < dev.json)
+STEVEBOT_FORBIDDEN_COMMANDS=$(shell jq .forbidden_commands < dev.json)
+# ---
+
 all: build run
 
 # build stevebot
@@ -41,26 +51,26 @@ package:
 
 # run stevebot
 run:
-	STEVEBOT_RCON_HOST=$(shell jq .rcon_host < dev.json) \
-		STEVEBOT_RCON_PORT=$(shell jq .rcon_port < dev.json) \
-		STEVEBOT_RCON_PASSWORD=$(shell jq .rcon_password < dev.json) \
-		STEVEBOT_DISCORD_TOKEN=$(shell jq .discord_token < dev.json) \
-		STEVEBOT_COMMAND_PREFIX=$(shell jq .command_prefix < dev.json) \
-		STEVEBOT_ALLOWED_COMMANDS=$(shell jq .allowed_commands < dev.json) \
-		STEVEBOT_FORBIDDEN_COMMANDS=$(shell jq .forbidden_commands < dev.json) \
+	STEVEBOT_RCON_HOST=$(STEVEBOT_RCON_HOST) \
+		STEVEBOT_RCON_PORT=$(STEVEBOT_RCON_PORT) \
+		STEVEBOT_RCON_PASSWORD=$(STEVEBOT_RCON_PASSWORD) \
+		STEVEBOT_DISCORD_TOKEN=$(STEVEBOT_DISCORD_TOKEN) \
+		STEVEBOT_COMMAND_PREFIX=$(STEVEBOT_COMMAND_PREFIX) \
+		STEVEBOT_ALLOWED_COMMANDS=$(STEVEBOT_ALLOWED_COMMANDS) \
+		STEVEBOT_FORBIDDEN_COMMANDS=$(STEVEBOT_FORBIDDEN_COMMANDS) \
 		./$(BIN)
 .PHONY: run
 
 # run stevebot (packaged version - Docker)
 run-package:
 	docker run \
-		--env STEVEBOT_RCON_HOST=$(shell jq .rcon_host < dev.json) \
-		--env STEVEBOT_RCON_PORT=$(shell jq .rcon_port < dev.json) \
-		--env STEVEBOT_RCON_PASSWORD=$(shell jq .rcon_password < dev.json) \
-		--env STEVEBOT_DISCORD_TOKEN=$(shell jq .discord_token < dev.json) \
-		--env STEVEBOT_COMMAND_PREFIX=$(shell jq .command_prefix < dev.json) \
-		--env STEVEBOT_ALLOWED_COMMANDS=$(shell jq .allowed_commands < dev.json) \
-		--env STEVEBOT_FORBIDDEN_COMMANDS=$(shell jq .forbidden_commands < dev.json) \
+		--env STEVEBOT_RCON_HOST=$(STEVEBOT_RCON_HOST) \
+		--env STEVEBOT_RCON_PORT=$(STEVEBOT_RCON_PORT) \
+		--env STEVEBOT_RCON_PASSWORD=$(STEVEBOT_RCON_PASSWORD) \
+		--env STEVEBOT_DISCORD_TOKEN=$(STEVEBOT_DISCORD_TOKEN) \
+		--env STEVEBOT_COMMAND_PREFIX=$(STEVEBOT_COMMAND_PREFIX) \
+		--env STEVEBOT_ALLOWED_COMMANDS=$(STEVEBOT_ALLOWED_COMMANDS) \
+		--env STEVEBOT_FORBIDDEN_COMMANDS=$(STEVEBOT_FORBIDDEN_COMMANDS) \
 		--rm \
 		-it \
 		$(DOCKER_IMAGE_NAME):$(VERSION)
