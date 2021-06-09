@@ -8,6 +8,9 @@ RUN addgroup stevebot && adduser -S -G stevebot stevebot
 # application as another user and group)
 RUN apk update && apk add --no-cache dumb-init su-exec
 
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD [ "su-exec", "stevebot:stevebot", "stevebot" ]
+
 # required environment variables
 
 ENV STEVEBOT_RCON_HOST="127.0.0.1"
@@ -23,6 +26,3 @@ ARG version="dev"
 
 # add stevebot binary
 COPY cmd/stevebot/stevebot-${version}-linux-amd64 /usr/local/bin/stevebot
-
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD [ "su-exec", "stevebot:stevebot", "stevebot" ]
