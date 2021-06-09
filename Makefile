@@ -46,6 +46,8 @@ run:
 		STEVEBOT_RCON_PASSWORD=$(shell jq .rcon_password < dev.json) \
 		STEVEBOT_DISCORD_TOKEN=$(shell jq .discord_token < dev.json) \
 		STEVEBOT_COMMAND_PREFIX=$(shell jq .command_prefix < dev.json) \
+		STEVEBOT_ALLOWED_COMMANDS=$(shell jq .allowed_commands < dev.json) \
+		STEVEBOT_FORBIDDEN_COMMANDS=$(shell jq .forbidden_commands < dev.json) \
 		./$(BIN)
 .PHONY: run
 
@@ -57,6 +59,8 @@ run-package:
 		--env STEVEBOT_RCON_PASSWORD=$(shell jq .rcon_password < dev.json) \
 		--env STEVEBOT_DISCORD_TOKEN=$(shell jq .discord_token < dev.json) \
 		--env STEVEBOT_COMMAND_PREFIX=$(shell jq .command_prefix < dev.json) \
+		--env STEVEBOT_ALLOWED_COMMANDS=$(shell jq .allowed_commands < dev.json) \
+		--env STEVEBOT_FORBIDDEN_COMMANDS=$(shell jq .forbidden_commands < dev.json) \
 		--rm \
 		-it \
 		$(DOCKER_IMAGE_NAME):$(VERSION)

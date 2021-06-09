@@ -3,5 +3,7 @@
     "rcon_port": 25575,
     "rcon_password": "",
     "discord_token": "",
-    "command_prefix": "~"
+    "command_prefix": "~",
+    "allowed_commands": "",
+    "forbidden_commands": ""
 }

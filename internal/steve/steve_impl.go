@@ -223,7 +223,10 @@ func (s *steveImpl) updateRconClient(newClient rconClient,
 func (s *steveImpl) SubmitCommand(ctx context.Context,
 	command []string) SteveCommandOutput {
 
-	// todo 25/05/2021: implement forbidden/allowed commands
+	// if this command does not pass the filter, return an error
+	if err := commandFilter(command[0]); err != nil {
+		return newSteveCommandOutput(err)
+	}
 
 	locked := make(chan struct{}, 1)
 	go func() {
