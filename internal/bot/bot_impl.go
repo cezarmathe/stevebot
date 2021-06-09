@@ -157,8 +157,8 @@ func (b *botImpl) handle(s *discordgo.Session, m *discordgo.MessageCreate) {
 		cancel()
 	case err := <-done:
 		if err != nil {
-			log.Warnw("command failed: %s",
-				err,
+			log.Warnw("command failed",
+				"err", err,
 				"cmd", strings.Join(command, " "),
 				"author", m.Author.String())
 		}
