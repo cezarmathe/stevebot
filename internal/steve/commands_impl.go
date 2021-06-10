@@ -2,12 +2,12 @@ package steve
 
 type steveCommandInputImpl struct {
 	inner     []string
-	innerChan chan<- RconCommandOutput
+	innerChan chan<- rconCommandOutput
 }
 
 type steveCommandOutputImpl struct {
 	err       error
-	innerChan <-chan RconCommandOutput
+	innerChan <-chan rconCommandOutput
 }
 
 func newSteveCommand(command []string) (*steveCommandInputImpl,
@@ -19,7 +19,7 @@ func newSteveCommand(command []string) (*steveCommandInputImpl,
 	out := new(steveCommandOutputImpl)
 	out.err = nil
 
-	innerChan := make(chan RconCommandOutput, 1)
+	innerChan := make(chan rconCommandOutput, 1)
 	in.innerChan = innerChan
 	out.innerChan = innerChan
 
@@ -34,7 +34,7 @@ func (c *steveCommandInputImpl) Command() []string {
 	return c.inner
 }
 
-func (c *steveCommandInputImpl) InChan() chan<- RconCommandOutput {
+func (c *steveCommandInputImpl) InChan() chan<- rconCommandOutput {
 	return c.innerChan
 }
 
@@ -46,7 +46,7 @@ func (c *steveCommandOutputImpl) Success() bool {
 	return c.err == nil
 }
 
-func (c *steveCommandOutputImpl) OutChan() <-chan RconCommandOutput {
+func (c *steveCommandOutputImpl) OutChan() <-chan rconCommandOutput {
 	return c.innerChan
 }
 

@@ -7,11 +7,11 @@ type SteveCommandInput interface {
 
 	// InChan returns the sending-side of the channel through which the output
 	// is passed.
-	InChan() chan<- RconCommandOutput
+	InChan() chan<- rconCommandOutput
 }
 
-// RconCommandInput is the input required to send a rcon command.
-type RconCommandInput interface {
+// rconCommandInput is the input required to send a rcon command.
+type rconCommandInput interface {
 	// Command returns the command.
 	Command() string
 }
@@ -26,11 +26,11 @@ type SteveCommandOutput interface {
 
 	// OutChan returns the receiving-side of the channel through which the
 	// output is passed.
-	OutChan() <-chan RconCommandOutput
+	OutChan() <-chan rconCommandOutput
 }
 
-// RconCommandOutput is the output produced by sending a command via rcon.
-type RconCommandOutput interface {
+// rconCommandOutput is the output produced by sending a command via rcon.
+type rconCommandOutput interface {
 	error
 
 	// Out returns the message sent back by the Minecraft Server via rcon.
