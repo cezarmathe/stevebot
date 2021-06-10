@@ -5,11 +5,8 @@ import (
 )
 
 // rconClient is the interface between steve and the Minecraft Server (via
-// RCON).
+// RCON). An rcon client is NOT thread safe!
 type rconClient interface {
-	// IsDummy returns whether this rcon client is a dummy rcon client or not.
-	IsDummy() bool
-
 	// SendCommand sends a command via RCON.
-	SendCommand(context.Context, RconCommandInput) RconCommandOutput
+	SendCommand(context.Context, rconCommandInput) rconCommandOutput
 }

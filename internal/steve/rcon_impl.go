@@ -7,30 +7,12 @@ import (
 	"github.com/bearbin/mcgorcon"
 )
 
-// rconClientDummy is a dummy rcon client.
-type rconClientDummy struct{}
-
-func newDummyRconClient() rconClient {
-	return new(rconClientDummy)
-}
-
-func (c *rconClientDummy) IsDummy() bool {
-	return true
-}
-
-func (c *rconClientDummy) SendCommand(ctx context.Context,
-	input RconCommandInput) RconCommandOutput {
-
-	err := fmt.Errorf("stevebot is not connected to the server via rcon")
-	return newRconCommandOutput("", err)
-}
-
-// rconClientImpl is an actual implementation of a rcon client.
 type rconClientImpl struct {
 	inner *mcgorcon.Client
 }
 
 func newRconClientImpl(ctx context.Context) (rconClient, error) {
+	// data returned after dialing a minecraft server
 	type out struct {
 		client *mcgorcon.Client
 		err    error
@@ -44,8 +26,17 @@ func newRconClientImpl(ctx context.Context) (rconClient, error) {
 
 	select {
 	case <-ctx.Done():
-		errMsg := "context canceled before rcon client could be created"
-		return nil, fmt.Errorf(errMsg)
+		// create a goroutine that actually waits for the operation to finish
+		// this happens in order to log a potential error (or it's absence)
+		go func() {
+			out := <-outChan
+			if out.err != nil {
+				log.Warnf("rcon client: new: %w", out.err)
+			} else {
+				log.Warn("rcon client: new: ok after context canceled")
+			}
+		}()
+		return nil, fmt.Errorf("rcon client: new: context canceled")
 	case out := <-outChan:
 		if out.err != nil {
 			return nil, out.err
@@ -54,14 +45,10 @@ func newRconClientImpl(ctx context.Context) (rconClient, error) {
 	}
 }
 
-func (c *rconClientImpl) IsDummy() bool {
-	return false
-}
-
 func (c *rconClientImpl) SendCommand(ctx context.Context,
-	input RconCommandInput) RconCommandOutput {
+	input rconCommandInput) rconCommandOutput {
 
-	outChan := make(chan RconCommandOutput, 1)
+	outChan := make(chan rconCommandOutput, 1)
 
 	go func() {
 		out, err := c.inner.SendCommand(input.Command())
@@ -70,7 +57,19 @@ func (c *rconClientImpl) SendCommand(ctx context.Context,
 
 	select {
 	case <-ctx.Done():
-		err := fmt.Errorf("server did not respond to the rcon command in time")
+		// create a goroutine that actually waits for the operation to finish
+		// this happens in order to log a potential error (or it's absence)
+		go func() {
+			out := <-outChan
+			if out.Success() {
+				log.Warnw(
+					"rcon client: send command: ok after context canceled",
+					"out", out.Out())
+			} else {
+				log.Warnf("rcon client: send command: %w", out)
+			}
+		}()
+		err := fmt.Errorf("rcon client: send command: context canceled")
 		return newRconCommandOutput("", err)
 	case out := <-outChan:
 		return out
