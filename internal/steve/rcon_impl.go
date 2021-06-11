@@ -36,7 +36,8 @@ func newRconClientImpl(ctx context.Context) (rconClient, error) {
 				log.Warn("rcon client: new: ok after context canceled")
 			}
 		}()
-		return nil, fmt.Errorf("rcon client: new: context canceled")
+		log.Warn("rcon client: new: context canceled")
+		return nil, fmt.Errorf("timed out waiting for a new rcon client")
 	case out := <-outChan:
 		if out.err != nil {
 			return nil, out.err
@@ -69,7 +70,8 @@ func (c *rconClientImpl) SendCommand(ctx context.Context,
 				log.Warnf("rcon client: send command: %w", out)
 			}
 		}()
-		err := fmt.Errorf("rcon client: send command: context canceled")
+		log.Warn("rcon client: send command: context canceled")
+		err := fmt.Errorf("timed out waiting to send a command")
 		return newRconCommandOutput("", err)
 	case out := <-outChan:
 		return out
