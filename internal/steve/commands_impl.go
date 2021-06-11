@@ -34,7 +34,7 @@ func (c *steveCommandInputImpl) Command() []string {
 	return c.inner
 }
 
-func (c *steveCommandInputImpl) InChan() chan<- rconCommandOutput {
+func (c *steveCommandInputImpl) inChan() chan<- rconCommandOutput {
 	return c.innerChan
 }
 

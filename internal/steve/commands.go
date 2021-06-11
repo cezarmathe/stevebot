@@ -7,7 +7,7 @@ type SteveCommandInput interface {
 
 	// InChan returns the sending-side of the channel through which the output
 	// is passed.
-	InChan() chan<- rconCommandOutput
+	inChan() chan<- rconCommandOutput
 }
 
 // rconCommandInput is the input required to send a rcon command.
