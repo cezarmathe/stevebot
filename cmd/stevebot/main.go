@@ -45,26 +45,26 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)
 
-	err := steve.NewSteve(ctx, wg)
+	err := steve.NewSteve()
 	if err != nil {
 		log.Errorw("failed to create a new steve", "err", err)
 		cancel()
 		shutdown(wg)
 	}
-	err = bot.NewBot(ctx, wg)
+	err = bot.NewBot()
 	if err != nil {
 		log.Errorw("failed to create a new bot", "err", err)
 		cancel()
 		shutdown(wg)
 	}
 
-	err = steve.Get().Start()
+	err = steve.Get().Start(ctx)
 	if err != nil {
 		log.Errorw("failed to start steve", "err", err)
 		cancel()
 		shutdown(wg)
 	}
-	err = bot.Get().Start()
+	err = bot.Get().Start(ctx, wg)
 	if err != nil {
 		log.Errorw("failed to start bot", "err", err)
 		cancel()
