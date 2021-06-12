@@ -29,22 +29,16 @@ var (
 )
 
 type botImpl struct {
-	ctx context.Context
-	wg  *sync.WaitGroup
-
 	mutex *sync.Mutex
 	sess  *discordgo.Session
 }
 
-func newBot(ctx context.Context, wg *sync.WaitGroup) error {
+func newBot() error {
 	if bot != nil {
 		return fmt.Errorf("bot has already been created")
 	}
 
 	bot = new(botImpl)
-
-	bot.ctx = ctx
-	bot.wg = wg
 
 	bot.mutex = new(sync.Mutex)
 	bot.sess = nil
@@ -56,10 +50,8 @@ func newBot(ctx context.Context, wg *sync.WaitGroup) error {
 	return nil
 }
 
-func (b *botImpl) Start() error {
-	if b == nil {
-		return fmt.Errorf("cannot start bot: uninitialized")
-	}
+func (b *botImpl) Start(ctx context.Context, wg *sync.WaitGroup) error {
+	log.Info("hello, this is bot")
 
 	dg, err := discordgo.New(fmt.Sprintf("Bot %s", discordToken))
 	if err != nil {
@@ -67,7 +59,7 @@ func (b *botImpl) Start() error {
 	}
 
 	dg.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		b.handle(s, m)
+		b.handleCommand(ctx, s, m)
 	})
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages)
 
@@ -79,13 +71,13 @@ func (b *botImpl) Start() error {
 	b.sess = dg
 	b.mutex.Unlock()
 
-	b.wg.Add(1)
-	go b.gracefulDisconnect()
+	wg.Add(1)
+	go b.gracefulDisconnect(ctx, wg)
 
 	return nil
 }
 
-func (b *botImpl) handle(s *discordgo.Session, m *discordgo.MessageCreate) {
+func (b *botImpl) handleCommand(ctx context.Context, s *discordgo.Session, m *discordgo.MessageCreate) {
 	// do not process messages sent by the bot
 	if m.Author.ID == s.State.User.ID {
 		return
@@ -99,7 +91,7 @@ func (b *botImpl) handle(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// get command words
 	command := strings.Fields(strings.TrimPrefix(m.Content, commandPrefix))
 
-	ctx, cancel := context.WithTimeout(b.ctx, COMMAND_TIMEOUT)
+	ctx, cancel := context.WithTimeout(ctx, COMMAND_TIMEOUT)
 
 	done := make(chan error, 1)
 	go func() {
@@ -153,7 +145,7 @@ func (b *botImpl) handle(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}()
 
 	select {
-	case <-b.ctx.Done():
+	case <-ctx.Done():
 		cancel()
 	case err := <-done:
 		if err != nil {
@@ -165,30 +157,10 @@ func (b *botImpl) handle(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-// UpdateStatus updates the status of the bot.
-func (b *botImpl) UpdateStatus(status string) error {
-	b.mutex.Lock()
-
-	errChan := make(chan error, 1)
-	go func() {
-		err := b.sess.UpdateStatus(0, status)
-		errChan <- err
-	}()
-
-	select {
-	case err := <-errChan:
-		b.mutex.Unlock()
-		return err
-	case <-b.ctx.Done():
-		log.Warn("shutting down, session mutex will remain locked")
-		return fmt.Errorf("context canceled before UpdateStatus could finish")
-	}
-}
-
-func (b *botImpl) gracefulDisconnect() {
+func (b *botImpl) gracefulDisconnect(ctx context.Context, wg *sync.WaitGroup) {
 	locked := make(chan struct{}, 1)
 
-	<-b.ctx.Done()
+	<-ctx.Done()
 
 	go func() {
 		b.mutex.Lock()
@@ -202,7 +174,5 @@ func (b *botImpl) gracefulDisconnect() {
 		log.Warnw("failed to gracefully close the connection to discord")
 	}
 
-	b.wg.Done()
+	wg.Done()
 }
-
-func (b *botImpl) handleCommand(command []string) {}
