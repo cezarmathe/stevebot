@@ -2,70 +2,37 @@ package steve
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"net"
 	"strings"
 	"sync"
 	"time"
-)
-
-const (
-	// note 25/05/2021: is one minute okay?
-	// duration of the watch server watchdog
-	watchServerWatchdogDuration = time.Minute
-
-	// note 25/05/2021: are five seconds okay?
-	// duration waited by watchServer until considering a server dial failed
-	watchServerDialTimeout = time.Second * 5
 )
 
 var (
 	steve *steveImpl
 )
 
-type steveImpl struct {
-	ctx context.Context
-	wg  *sync.WaitGroup
+var (
+	getInitialRconClientTimeout = time.Second * 5
+)
 
+type steveImpl struct {
 	clientLock sync.Locker
 	client     rconClient
-
-	// channel for skipping a scheduled watch server operation
-	// this just resets the watchdog
-	skipWatchServerChan chan struct{}
-
-	// channel for scheduling a watch server operation now
-	// this bypasses the watchdog
-	runWatchServerChan chan struct{}
 }
 
-func newSteve(ctx context.Context, wg *sync.WaitGroup) error {
+func newSteve() error {
 	if steve != nil {
-		return fmt.Errorf("steve has already been created")
+		return fmt.Errorf("steve: new: already created")
 	}
 
 	steve = new(steveImpl)
-
-	steve.ctx = ctx
-	steve.wg = wg
 
 	// note 26/05/2021: mutex was an arbitraty choice, this could have been
 	//                  a rwlock
 	steve.clientLock = new(sync.Mutex)
 	steve.client = nil
-
-	// skip channel is unbuffered
-	// this avoids blocking the goroutine that calls skipWatchServer without
-	// affecting the watchServer goroutine - it will loop a few times until all
-	// channel values are exhausted
-	steve.skipWatchServerChan = make(chan struct{})
-
-	// run watch server is unbuffered
-	// this avoids blocking the goroutine that calls runWatchServer without
-	// affecting the watchServer goroutine - while the operation is running, it
-	// spawns another goroutine that exhausts all incoming runWatchServer
-	// requests
-	steve.runWatchServerChan = make(chan struct{})
 
 	// lock the mutex until the client is initialized
 	// unlocking happens in Start() only if starting is successful
@@ -74,23 +41,21 @@ func newSteve(ctx context.Context, wg *sync.WaitGroup) error {
 	return nil
 }
 
-func (s *steveImpl) Start() error {
+func (s *steveImpl) Start(ctx context.Context) error {
+	log.Info("hello, this is steve")
 	// idea 23/05/2021: if address is domain, set periodic resolve
 	//                  othwerise, pass ip
 
-	client, err := newRconClientImpl(s.ctx)
+	ctx, cancel := context.WithTimeout(ctx, getInitialRconClientTimeout)
+	client, err := newRconClientImpl(ctx)
 	if err != nil {
-		log.Warnw("first client initialization failed", "err", err)
-		client = newDummyRconClient()
+		log.Warn("steve: start: failed to get initial rcon client: %w", err)
+	} else {
+		// note 24/05/2021: it is expected for the mutex to be locked here, it was
+		//                  locked by the newSteve func
+		steve.client = client
 	}
-
-	// note 24/05/2021: it is expected for the mutex to be locked here, it was
-	//                  locked by the newSteve func
-	steve.client = client
-
-	// start the watchServer goroutine
-	s.wg.Add(1)
-	go steve.watchServer()
+	cancel()
 
 	// unlock the mutex that guards rconClient
 	steve.clientLock.Unlock()
@@ -98,126 +63,43 @@ func (s *steveImpl) Start() error {
 	return nil
 }
 
-func (s *steveImpl) watchServer() {
-	log.Debugw("starting", "who", "watchServer")
+func (s *steveImpl) getRconClient(ctx context.Context) (rconClient, error) {
+	locked := make(chan struct{}, 1)
 
-	// channel for returning errors from the goroutine that dials the rcon
-	// server
-	errChan := make(chan error, 1)
-
-	for {
-		// run watchdog
-		select {
-		case <-s.ctx.Done():
-			log.Debugw("context canceled, shutting down", "who", "watchServer")
-			s.wg.Done()
-			return
-		case <-s.skipWatchServerChan:
-			log.Debugw("skipping an operation", "who", "watchServer")
-			continue
-		case <-s.runWatchServerChan:
-			log.Debugw("running an operation now", "who", "watchServer")
-			// note 26/05/2021: this break is intentionally used to signal that
-			//                  we want to break from select, not from the loop
-			break
-		case <-time.After(watchServerWatchdogDuration):
-			log.Debugw("watchdog timed out, running an operation now",
-				"who", "watchServer")
-			// note 26/05/2021: this break is intentionally used to signal that
-			//                  we want to break from select, not from the loop
-			break
-		}
-
-		// attempt to dial the server
-		go func() {
-			_, err := net.Dial("tcp", fmt.Sprintf("%s:%d", rconHost, rconPort))
-			errChan <- err
-		}()
-
-		// exhaust incoming runWatchServer requests while the operation runs
-		done := make(chan struct{}, 1)
-		s.wg.Add(1)
-		go func() {
-			for {
-				select {
-				case <-s.ctx.Done():
-					s.wg.Done()
-					return
-				case <-done:
-					s.wg.Done()
-					return
-				case <-s.runWatchServerChan:
-					log.Debugw("received a runWatchServer request, ignoring",
-						"who", "watchServer")
-					continue
-				}
-			}
-		}()
-
-		// wait for operation to finish
-		select {
-		case <-s.ctx.Done():
-			s.wg.Done()
-			log.Debugw("context canceled before the operation finished",
-				"who", "watchServer")
-			return
-		case <-s.skipWatchServerChan:
-			log.Debugw("skipping the operation that runs right now",
-				"who", "watchServer")
-			continue
-		case <-time.After(watchServerDialTimeout):
-			log.Warnw("failed to dial rcon server",
-				"err", "timeout",
-				"who", "watchServer")
-			err := s.updateRconClient(newDummyRconClient(), nil)
-			if err != nil {
-				log.Warnw("failed to update rcon client",
-					"err", err,
-					"who", "watchServer")
-			}
-		case err := <-errChan:
-			if err != nil {
-				log.Warnw("failed to dial rcon server",
-					"err", err,
-					"who", "watchServer")
-				err = s.updateRconClient(newDummyRconClient(), nil)
-				if err != nil {
-					log.Warnw("failed to update rcon client",
-						"err", err,
-						"who", "watchServer")
-				}
-			}
-		}
-		done <- struct{}{}
-	}
-}
-
-func (s *steveImpl) updateRconClient(newClient rconClient,
-	clientLock sync.Locker) error {
-
-	lockChan := make(chan sync.Locker, 1)
-
+	// lock the rcon client
+	// note 11/06/2021: the lock will be unlocked either by `handleCommand` or
+	//                  by a goroutine that gets started if the context is
+	//                  canceled
 	go func() {
-		var lock sync.Locker
-		if clientLock != nil {
-			lock = clientLock
-		} else {
-			lock = s.clientLock
-			lock.Lock()
-		}
-		lockChan <- lock
+		s.clientLock.Lock()
+		locked <- struct{}{}
 	}()
 
+	// wait for the lock or return on timeout
 	select {
-	case lock := <-lockChan:
-		s.client = newClient
-		lock.Unlock()
-		return nil
-	case <-s.ctx.Done():
-		log.Warnw("rcon client mutex will not be unlocked")
-		return fmt.Errorf("failed to update rcon client: %s",
-			"context canceled before mutex could be unlocked")
+	case <-ctx.Done():
+		// note 11/06/2021: create a goroutine that unlocks the client if the
+		//                  context gets canceled
+		go func() {
+			<-locked
+			s.clientLock.Unlock()
+			log.Warn("steve: get rcon client: unlocked after context canceled")
+		}()
+		err := errors.New("timed out waiting for an available rcon client")
+		return nil, err
+	case <-locked:
+		break
 	}
+
+	// if there is a client, return it
+	if s.client != nil {
+		return s.client, nil
+	}
+
+	// otherwise, create a new rcon client
+	client, err := newRconClientImpl(ctx)
+	s.client = client
+	return client, err
 }
 
 func (s *steveImpl) SubmitCommand(ctx context.Context,
@@ -228,75 +110,43 @@ func (s *steveImpl) SubmitCommand(ctx context.Context,
 		return newSteveCommandOutput(err)
 	}
 
-	locked := make(chan struct{}, 1)
+	// create a channel for getting the steve output from the goroutine
+	outChan := make(chan SteveCommandOutput)
+
+	// start the command handler
 	go func() {
-		// note 26/05/2021: the mutex will be unlocked by handleCommand
-		s.clientLock.Lock()
-		locked <- struct{}{}
+		// get an rcon client
+		client, err := s.getRconClient(ctx)
+		if err != nil {
+			outChan <- newSteveCommandOutput(err)
+			return
+		}
+
+		// create the steve command input and output
+		steveIn, steveOut := newSteveCommand(command)
+		// return the steve command output to SubmitCommand so that it can
+		// return it to bot
+		outChan <- steveOut
+
+		// build rcon command input
+		rconIn := newRconCommandInput(strings.Join(steveIn.Command(), " "))
+
+		// sent the command and get it's output
+		rconOut := client.SendCommand(ctx, rconIn)
+
+		// note 11/06/2021: if the command is unsuccessful, reset the rcon client
+		//                  this should ideally happen only when steve can't reach
+		//                  the minecraft server
+		if !rconOut.Success() {
+			s.client = nil
+		}
+
+		// unlock client mutex previously locked by getRconClient
+		s.clientLock.Unlock()
+
+		// send result
+		steveIn.inChan() <- rconOut
 	}()
 
-	select {
-	case <-ctx.Done():
-		// fixme 01/06/2021: client lock will remain locked forever?
-		go func() {
-			<-locked
-			s.clientLock.Unlock()
-		}()
-		return newSteveCommandOutput(fmt.Errorf("could not get rcon client"))
-	case <-locked:
-		in, out := newSteveCommand(command)
-		go s.handleCommand(ctx, in)
-		return out
-	}
-}
-
-func (s *steveImpl) skipWatchServer() {
-	s.skipWatchServerChan <- struct{}{}
-}
-
-func (s *steveImpl) runWatchServer() {
-	s.runWatchServerChan <- struct{}{}
-}
-
-func (s *steveImpl) getRconClient(ctx context.Context) (rconClient, error) {
-	client := s.client
-
-	if client.IsDummy() {
-		client, err := newRconClientImpl(ctx)
-		if err != nil {
-			return nil, err
-		}
-		err = s.updateRconClient(client, s.clientLock)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return client, nil
-}
-
-func (s *steveImpl) handleCommand(ctx context.Context,
-	input SteveCommandInput) {
-
-	command := newRconCommandInput(strings.Join(input.Command(), " "))
-
-	client, err := s.getRconClient(ctx)
-	if err != nil {
-		input.InChan() <- newRconCommandOutput("", err)
-		s.runWatchServer()
-		return
-	}
-	s.skipWatchServer()
-
-	out := client.SendCommand(ctx, command)
-	if !out.Success() {
-		err = s.updateRconClient(newDummyRconClient(), s.clientLock)
-		if err != nil {
-			log.Warnw("failed to update rcon client to dummy", "err", err)
-		}
-	} else {
-		// note 26/05/2021: the mutex was previously locked by SubmitCommand
-		s.clientLock.Unlock()
-	}
-	input.InChan() <- out
+	return <-outChan
 }
