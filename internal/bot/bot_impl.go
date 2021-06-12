@@ -110,12 +110,21 @@ func (b *botImpl) handleCommand(ctx context.Context, s *discordgo.Session, m *di
 		// if this fails, update the WIP message and exit
 		steveOut := steve.Get().SubmitCommand(ctx, command)
 		if !steveOut.Success() {
-			errMsg := fmt.Sprintf("%s command failed: %s (\"%s\" by %s)",
+			errMsg := fmt.Sprintf("%s  %s (\"%s\" by %s)",
 				CMD_ERR_EMOJI,
 				steveOut.Error(),
 				strings.Join(command, " "),
 				m.Author.Mention())
 			_, err = s.ChannelMessageEdit(m.ChannelID, msg.ID, errMsg)
+			if err != nil {
+				log.Warnf("bot: handle command: %w", err)
+				errMsg = fmt.Sprintf("%s  %s (\"%s\" by %s)",
+					CMD_ERR_EMOJI,
+					"can't update discord message with command output",
+					strings.Join(command, " "),
+					m.Author.Mention())
+				_, _ = s.ChannelMessageEdit(m.ChannelID, msg.ID, errMsg)
+			}
 			done <- err
 			cancel()
 			return
@@ -126,19 +135,37 @@ func (b *botImpl) handleCommand(ctx context.Context, s *discordgo.Session, m *di
 
 		// update wip message with command output
 		if rconOut.Success() {
-			okMsg := fmt.Sprintf("%s %s (\"%s\" by %s)",
+			okMsg := fmt.Sprintf("%s  %s (\"%s\" by %s)",
 				CMD_OK_EMOJI,
 				rconOut.Out(),
 				strings.Join(command, " "),
 				m.Author.Mention())
 			_, err = s.ChannelMessageEdit(m.ChannelID, msg.ID, okMsg)
+			if err != nil {
+				log.Warnf("bot: handle command: %w", err)
+				errMsg := fmt.Sprintf("%s  %s (\"%s\" by %s)",
+					CMD_ERR_EMOJI,
+					"can't update discord message with command output",
+					strings.Join(command, " "),
+					m.Author.Mention())
+				_, _ = s.ChannelMessageEdit(m.ChannelID, msg.ID, errMsg)
+			}
 		} else {
-			errMsg := fmt.Sprintf("%s %s (\"%s\" by %s)",
+			errMsg := fmt.Sprintf("%s  %s (\"%s\" by %s)",
 				CMD_ERR_EMOJI,
 				rconOut.Error(),
 				strings.Join(command, " "),
 				m.Author.Mention())
 			_, err = s.ChannelMessageEdit(m.ChannelID, msg.ID, errMsg)
+			if err != nil {
+				log.Warnf("bot: handle command: %w", err)
+				errMsg = fmt.Sprintf("%s  %s (\"%s\" by %s)",
+					CMD_ERR_EMOJI,
+					"can't update discord message with command output",
+					strings.Join(command, " "),
+					m.Author.Mention())
+				_, _ = s.ChannelMessageEdit(m.ChannelID, msg.ID, errMsg)
+			}
 		}
 		done <- err
 		cancel()

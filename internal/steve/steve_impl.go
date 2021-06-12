@@ -49,7 +49,7 @@ func (s *steveImpl) Start(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, getInitialRconClientTimeout)
 	client, err := newRconClientImpl(ctx)
 	if err != nil {
-		log.Warn("steve: start: failed to get initial rcon client: %w", err)
+		log.Warnf("steve: start: failed to get initial rcon client: %w", err)
 	} else {
 		// note 24/05/2021: it is expected for the mutex to be locked here, it was
 		//                  locked by the newSteve func
@@ -99,7 +99,11 @@ func (s *steveImpl) getRconClient(ctx context.Context) (rconClient, error) {
 	// otherwise, create a new rcon client
 	client, err := newRconClientImpl(ctx)
 	s.client = client
-	return client, err
+	if err != nil {
+		log.Warnf("steve: get rcon client: %w", err)
+	}
+	errMsg := "failed to get an rcon client for the mineraft server"
+	return client, errors.New(errMsg)
 }
 
 func (s *steveImpl) SubmitCommand(ctx context.Context,

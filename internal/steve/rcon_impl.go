@@ -74,6 +74,10 @@ func (c *rconClientImpl) SendCommand(ctx context.Context,
 		err := fmt.Errorf("timed out waiting to send a command")
 		return newRconCommandOutput("", err)
 	case out := <-outChan:
-		return out
+		if !out.Success() {
+			log.Warnf("rcon client: send command: %w", out)
+		}
+		err := fmt.Errorf("encountered an error while sending the command")
+		return newRconCommandOutput("", err)
 	}
 }
