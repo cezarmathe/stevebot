@@ -11,6 +11,7 @@ import (
 
 	"github.com/cezarmathe/stevebot/internal/bot"
 	"github.com/cezarmathe/stevebot/internal/steve"
+	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
@@ -42,10 +43,15 @@ func init() {
 func main() {
 	log.Infow("hello, this is stevebot", "version", Version)
 
+	err := godotenv.Load()
+	if err != nil {
+		log.Info("not loading variables from .env")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := new(sync.WaitGroup)
 
-	err := steve.NewSteve()
+	err = steve.NewSteve()
 	if err != nil {
 		log.Errorw("failed to create a new steve", "err", err)
 		cancel()
