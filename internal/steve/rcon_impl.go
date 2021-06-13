@@ -76,8 +76,9 @@ func (c *rconClientImpl) SendCommand(ctx context.Context,
 	case out := <-outChan:
 		if !out.Success() {
 			log.Warnf("rcon client: send command: %w", out)
+			err := fmt.Errorf("encountered an error while sending the command")
+			return newRconCommandOutput("", err)
 		}
-		err := fmt.Errorf("encountered an error while sending the command")
-		return newRconCommandOutput("", err)
+		return newRconCommandOutput(out.Out(), nil)
 	}
 }
