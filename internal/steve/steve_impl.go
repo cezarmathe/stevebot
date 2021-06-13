@@ -101,9 +101,10 @@ func (s *steveImpl) getRconClient(ctx context.Context) (rconClient, error) {
 	s.client = client
 	if err != nil {
 		log.Warnf("steve: get rcon client: %w", err)
+		errMsg := "failed to get an rcon client for the mineraft server"
+		return nil, errors.New(errMsg)
 	}
-	errMsg := "failed to get an rcon client for the mineraft server"
-	return client, errors.New(errMsg)
+	return client, nil
 }
 
 func (s *steveImpl) SubmitCommand(ctx context.Context,
