@@ -122,6 +122,10 @@ func (s *steveImpl) SubmitCommand(ctx context.Context,
 	go func() {
 		// get an rcon client
 		client, err := s.getRconClient(ctx)
+
+		// unlock client mutex previously locked by getRconClient
+		defer s.clientLock.Unlock()
+
 		if err != nil {
 			outChan <- newSteveCommandOutput(err)
 			return
@@ -145,9 +149,6 @@ func (s *steveImpl) SubmitCommand(ctx context.Context,
 		if !rconOut.Success() {
 			s.client = nil
 		}
-
-		// unlock client mutex previously locked by getRconClient
-		s.clientLock.Unlock()
 
 		// send result
 		steveIn.inChan() <- rconOut
