@@ -32,29 +32,9 @@ func init() {
 	}
 	log = logger.Sugar().Named("bot")
 
-	var ok bool
-	var shouldExit bool = false
-
-	discordToken, ok = os.LookupEnv(discordTokenKey)
-	if !ok {
-		log.Warnw("missing environment variable", "name", discordTokenKey)
-		shouldExit = true
-	}
-
-	commandPrefix, ok = os.LookupEnv(commandPrefixKey)
-	if !ok {
-		log.Warnw("missing environment variable", "name", commandPrefixKey)
-		shouldExit = true
-	}
-
 	commandStartRegexString := fmt.Sprintf("^%s\\w", commandPrefix)
 	commandStartRegex, err = regexp.Compile(commandStartRegexString)
 	if err != nil {
-		log.Warnw("failed to compile command start regex", "err", err)
-		shouldExit = true
-	}
-
-	if shouldExit {
-		log.Fatal("cannot continue")
+		log.Fatal("failed to compile command start regex", "err", err)
 	}
 }

@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -36,6 +37,25 @@ type botImpl struct {
 func newBot() error {
 	if bot != nil {
 		return fmt.Errorf("bot has already been created")
+	}
+
+	shouldExit := false
+	ok := true
+
+	discordToken, ok = os.LookupEnv(discordTokenKey)
+	if !ok {
+		log.Warnw("missing environment variable", "name", discordTokenKey)
+		shouldExit = true
+	}
+
+	commandPrefix, ok = os.LookupEnv(commandPrefixKey)
+	if !ok {
+		log.Warnw("missing environment variable", "name", commandPrefixKey)
+		shouldExit = true
+	}
+
+	if shouldExit {
+		return fmt.Errorf("missing environment variables required by bot")
 	}
 
 	bot = new(botImpl)
