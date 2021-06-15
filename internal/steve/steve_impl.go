@@ -101,10 +101,9 @@ func (s *steveImpl) getRconClient(ctx context.Context) (rconClient, error) {
 	s.client = client
 	if err != nil {
 		log.Warnf("steve: get rcon client: %w", err)
-		errMsg := "failed to get an rcon client for the mineraft server"
-		return nil, errors.New(errMsg)
 	}
-	return client, nil
+	errMsg := "failed to get an rcon client for the mineraft server"
+	return client, errors.New(errMsg)
 }
 
 func (s *steveImpl) SubmitCommand(ctx context.Context,
@@ -122,10 +121,6 @@ func (s *steveImpl) SubmitCommand(ctx context.Context,
 	go func() {
 		// get an rcon client
 		client, err := s.getRconClient(ctx)
-
-		// unlock client mutex previously locked by getRconClient
-		defer s.clientLock.Unlock()
-
 		if err != nil {
 			outChan <- newSteveCommandOutput(err)
 			return
@@ -149,6 +144,9 @@ func (s *steveImpl) SubmitCommand(ctx context.Context,
 		if !rconOut.Success() {
 			s.client = nil
 		}
+
+		// unlock client mutex previously locked by getRconClient
+		s.clientLock.Unlock()
 
 		// send result
 		steveIn.inChan() <- rconOut
