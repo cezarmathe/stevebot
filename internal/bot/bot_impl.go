@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -39,24 +40,28 @@ func newBot() error {
 		return fmt.Errorf("bot has already been created")
 	}
 
+	// load configuration from env
+
 	shouldExit := false
 	ok := true
 
 	discordToken, ok = os.LookupEnv(discordTokenKey)
 	if !ok {
-		log.Warnw("missing environment variable", "name", discordTokenKey)
+		log.Warnf("new bot: missing environment variable: %s", discordTokenKey)
 		shouldExit = true
 	}
 
 	commandPrefix, ok = os.LookupEnv(commandPrefixKey)
 	if !ok {
-		log.Warnw("missing environment variable", "name", commandPrefixKey)
+		log.Warnf("new bot: missing environment variable: %s", commandPrefixKey)
 		shouldExit = true
 	}
 
 	if shouldExit {
-		return fmt.Errorf("missing environment variables required by bot")
+		return errors.New("new bot: failed to load configuration from env")
 	}
+
+	// create the bot object
 
 	bot = new(botImpl)
 
