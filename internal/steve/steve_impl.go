@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +28,83 @@ func newSteve() error {
 	if steve != nil {
 		return fmt.Errorf("steve: new: already created")
 	}
+
+	// load configuration from env
+
+	var err error
+	var shouldExit bool = false
+	var ok bool
+
+	rconHost, ok = os.LookupEnv(rconHostKey)
+	if !ok {
+		log.Warnf("new steve: missing environment variable: %s", rconHostKey)
+		shouldExit = true
+	}
+
+	var rconPortTmp string
+	rconPortTmp, ok = os.LookupEnv(rconPortKey)
+	if !ok {
+		log.Warnf("new steve: missing environment variable: %s", rconPortKey)
+		shouldExit = true
+	}
+	rconPort, err = strconv.Atoi(rconPortTmp)
+	if err != nil {
+		log.Warnf("new steve: bad environment variable %s: expected integer, found: %s",
+			rconPortKey,
+			rconPortTmp)
+		shouldExit = true
+	}
+
+	rconPassword, ok = os.LookupEnv(rconPasswordKey)
+	if !ok {
+		log.Warnf("new steve: missing environment variable: %s", rconHostKey)
+		shouldExit = true
+	}
+
+	allowedCommandsStr, ok := os.LookupEnv(allowedCommandsKey)
+	if !ok {
+		allowedCommands = make([]string, 0)
+	} else {
+		allowedCommands = strings.Split(allowedCommandsStr, ",")
+	}
+
+	forbiddenCommandsStr, ok := os.LookupEnv(forbiddenCommandsKey)
+	if !ok {
+		forbiddenCommands = make([]string, 0)
+	} else {
+		forbiddenCommands = strings.Split(forbiddenCommandsStr, ",")
+	}
+
+	// allowed commands have a higher priority than forbidden commands
+	if len(allowedCommands) > 0 {
+		commandFilter = func(command string) error {
+			for _, allowedCommand := range allowedCommands {
+				if command == allowedCommand {
+					return nil
+				}
+			}
+			return errors.New("command not allowed")
+		}
+	} else if len(forbiddenCommands) > 0 {
+		commandFilter = func(command string) error {
+			for _, forbiddenCommand := range forbiddenCommands {
+				if command == forbiddenCommand {
+					return nil
+				}
+			}
+			return errors.New("forbidden command")
+		}
+	} else {
+		commandFilter = func(_ string) error {
+			return nil
+		}
+	}
+
+	if shouldExit {
+		return errors.New("new steve: failed to load configuration from env")
+	}
+
+	// create steve object
 
 	steve = new(steveImpl)
 
