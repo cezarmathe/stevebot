@@ -13,9 +13,9 @@ That's all.
 
 There are three ways to run **stevebot**.
 
-1. [Run the binary](docs/run_the_binary)
-2. [Deploy a Docker container yourself](docs/deploy_a_docker_container_yourself)
-3. [Use Terraform to deploy a Docker container](docs/deploy_a_docker_container_using_terraform)
+1. [Run the binary](docs/run_the_binary.md)
+2. [Deploy a Docker container yourself](docs/deploy_a_docker_container_yourself.md)
+3. [Use Terraform to deploy a Docker container](docs/deploy_a_docker_container_using_terraform.md)
 
 ## Releases
 
