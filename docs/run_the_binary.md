@@ -29,7 +29,7 @@ and the architecture for your os (`amd64` or `arm64`).
 
 `tar xvf stevebot-${version}-${os}-${arch}.tar.gz`
 
-- Create a `.env` file (see the [sample](../.sample.env))
+- Create a `.env` file (see the [sample](../sample.env))
 
 - Run the binary
 
