@@ -21,10 +21,12 @@ type Service struct {
 	steve stevev2i.SteveV2
 }
 
-func New(config *Config, logger *zap.Logger) Service {
+func New(config *Config, logger *zap.Logger, steve stevev2i.SteveV2) Service {
 	return Service{
 		config: config,
 		logger: logger,
+
+		steve: steve,
 	}
 }
 
