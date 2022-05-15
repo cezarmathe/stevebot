@@ -61,6 +61,7 @@ func main() {
 	if err := env.Parse(&mainConfig); err != nil {
 		logger.Panic("load main config", zap.Error(err))
 	}
+	logger.Debug("main config", zap.Any("value", mainConfig))
 
 	dSess, err := discordgo.New(fmt.Sprintf("Bot %s", mainConfig.DiscordToken))
 	if err != nil {
